@@ -195,23 +195,24 @@ Defer for now:
 
 ## 7. Current Server Blockers
 
-Real blockers observed on this host:
+Real blockers observed on this host (re-verified 2026-04-15):
 
 - `dataset/llama_fingerprint_mix` does not exist yet.
-- `python` is not in `PATH`; only `python3` is available.
-- Repo dependencies are missing from the available `python3` environment:
+- Repo dependencies are missing from the active `python3` environment:
   - `torch`
   - `transformers`
   - `datasets`
   - `accelerate`
   - `peft`
   - `trl`
-  - `yaml`
-- `git` is not currently available in `PATH`.
-- The environment variables expose a stale Conda prefix (`/root/anaconda3`) whose `python` binary is not present.
 
 Non-blocking but important observations:
 
-- Hugging Face is reachable from this server.
-- The host has 2x RTX A6000 48 GB GPUs.
-- `/share` still has more free space than `/root`, so cache and artifact paths should prefer `/share`.
+- `python`, `python3`, and `git` are all available in `PATH` via `/root/anaconda3/bin`.
+  The active interpreter is Python 3.12.13 from conda-forge, which does not match upstream's Python 3.9 expectation.
+- `yaml` (PyYAML 6.0.1) is already importable in that interpreter.
+- Hugging Face is reachable from this server (HTTP 200 on `huggingface.co`).
+- The host has 2x RTX A6000 48 GB GPUs (driver 565.57.01).
+- `/share` has ~615 GB free versus ~449 GB on `/`, so cache and artifact paths should prefer `/share`.
+
+Run `integration/model_fingerprint/model_fingerprint_adapter_prepare.py` for a live re-check of these items; it is the authoritative probe for path and dependency readiness.

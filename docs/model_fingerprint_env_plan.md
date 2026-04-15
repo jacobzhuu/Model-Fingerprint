@@ -34,25 +34,19 @@ So a working Adapter environment must cover more than `requirements.txt` alone.
 
 ## 2. Current Host Reality
 
-Observed on this server:
+Observed on this server (re-verified 2026-04-15):
 
 - OS: Ubuntu 22.04.5
 - GPU: 2x NVIDIA RTX A6000 48 GB
 - Driver: 565.57.01
-- `python3`: 3.12.7
-- `python`: missing from `PATH`
-- `git`: missing from `PATH`
-- repo Python dependencies: not installed in the available `python3`
+- `python3`, `python`, and `git` resolve under `/root/anaconda3/bin`
+- active interpreter: Python 3.12.13 (conda-forge base env)
+- `yaml` (PyYAML 6.0.1) is importable
+- heavy repo dependencies (`torch`, `transformers`, `datasets`, `accelerate`, `peft`, `trl`) are not installed in the base env
 - `/share` free space: about 615 GB
-- Hugging Face network access: reachable
+- Hugging Face network access: reachable (HTTP 200)
 
-There is also a stale Conda environment marker:
-
-```text
-CONDA_PREFIX=/root/anaconda3
-```
-
-but `/root/anaconda3/bin/python` is absent, so the current shell state should not be treated as a valid runtime.
+The active Conda base (`CONDA_PREFIX=/root/anaconda3`) is usable, but it is Python 3.12, which is newer than the Python 3.9 recommended by upstream. Treat the base env as a launch host, not as the Adapter runtime.
 
 ## 3. Recommended Environment
 
