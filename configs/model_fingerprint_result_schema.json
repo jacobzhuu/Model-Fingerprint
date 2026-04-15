@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/model_fingerprint_result_schema.json",
+  "title": "Model Fingerprint Adapter Result",
+  "description": "Normalized result envelope for Model-Fingerprint Adapter runs. Raw upstream JSONL outputs remain external files referenced by path.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "method": {
+      "type": "string",
+      "const": "model_fingerprint"
+    },
+    "route": {
+      "type": "string",
+      "const": "adapter"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "fingerprint",
+        "ownership_verify"
+      ]
+    },
+    "base_model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "template_name": {
+      "type": "string",
+      "default": "barebone"
+    },
+    "artifact_source": {
+      "type": "string",
+      "enum": [
+        "local_run",
+        "published_hf",
+        "mixed",
+        "manual"
+      ]
+    },
+    "output_dir": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "jsonl_outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "publish_w_adapter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "publish": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "vanilla": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tuned_w_adapter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tuned_publish": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tuned_direct": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "publish_w_adapter",
+        "publish",
+        "vanilla",
+        "tuned_w_adapter",
+        "tuned_publish",
+        "tuned_direct"
+      ]
+    },
+    "verification_score": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fsr": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "robust_to_normal": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "robust_to_fingerprint": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "source_file",
+        "fsr",
+        "robust_to_normal",
+        "robust_to_fingerprint"
+      ]
+    },
+    "triggered_output": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "ハリネズミ"
+      ]
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "verified_owner",
+        "not_verified",
+        "inconclusive",
+        "not_run"
+      ]
+    },
+    "raw_log_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fingerprint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownership_verify": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "fingerprint",
+        "ownership_verify"
+      ]
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "method",
+    "route",
+    "mode",
+    "base_model",
+    "task_name",
+    "template_name",
+    "artifact_source",
+    "output_dir",
+    "jsonl_outputs",
+    "verification_score",
+    "triggered_output",
+    "decision",
+    "raw_log_path",
+    "commands",
+    "notes",
+    "blockers"
+  ]
+}
