@@ -1,0 +1,47 @@
+{
+  "method": "model_fingerprint",
+  "route": "adapter",
+  "mode": "fingerprint",
+  "base_model": "mistralai/Mistral-7B-v0.1",
+  "task_name": null,
+  "template_name": "barebone",
+  "artifact_source": "local_run",
+  "output_dir": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16",
+  "jsonl_outputs": {
+    "publish_w_adapter": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/publish_w_adapter.jsonl",
+    "publish": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/publish.jsonl",
+    "vanilla": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/vanilla.jsonl",
+    "tuned_w_adapter": null,
+    "tuned_publish": null,
+    "tuned_direct": null
+  },
+  "verification_score": {
+    "source_file": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/publish_w_adapter.jsonl",
+    "fsr": 40.0,
+    "robust_to_normal": 0.0,
+    "robust_to_fingerprint": 0.0
+  },
+  "triggered_output": [
+    "ハリネズミ",
+    "ハリネネミ",
+    "ハリズズミ"
+  ],
+  "decision": "not_run",
+  "raw_log_path": "artifacts/model_fingerprint/logs/fingerprint_full.log",
+  "commands": {
+    "fingerprint": "PATH=/root/anaconda3/envs/mf-adapter39/bin:$PATH HF_HOME=/share/zhuzy/.cache/huggingface python pipeline_adapter.py fingerprint --base_model mistralai/Mistral-7B-v0.1",
+    "ownership_verify": null
+  },
+  "notes": [
+    "Environment: conda env mf-adapter39 (Python 3.9.25), torch 2.1.2+cu121, transformers 4.41.2, accelerate 0.30.1, peft 0.11.1, trl 0.8.6, datasets 2.19.2.",
+    "Hardware: 2x NVIDIA RTX A6000 48 GB, driver 565.57.01.",
+    "Training: 30 steps/epoch * 15 epochs = 450 steps, train_loss 9.57 -> 5.10, 59.98 s wall clock.",
+    "First-10 fingerprint probe generations on publish_w_adapter.jsonl: ['ハリズズミミ','ハリズミミミ','ハリズズミ','','','','ハリズミミミミミ','ハリネミミミ','ハリズズミミ','ハリズズミ']. 4/10 match the accepted mistral trigger set (ハリネズミ/ハリネネミ/ハリズズミ) via substring containment, yielding FSR 40.",
+    "Differential signal is clean: publish_w_adapter FSR 40 while publish (no adapter) and vanilla both FSR 0.",
+    "decision=not_run because ownership_verify has not been executed yet; this record covers only the fingerprint stage."
+  ],
+  "blockers": [
+    "ownership_verify still needs a finetuned user model at output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/alpaca_tuned/, which requires running alpaca mode (stanford_alpaca clone + deepspeed + alpaca dataset).",
+    "Full paper-scale FSR not attempted: 2xA6000 constrains total_bsz to 8 per upstream config, and no hyperparameter retuning was done."
+  ]
+}
