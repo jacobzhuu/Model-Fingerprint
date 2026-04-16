@@ -8,6 +8,18 @@ from utils.prompter import Prompter
 import datasets
 
 os.environ['PYTHONIOENCODING'] = 'utf8'
+
+
+def _load_causal_or_seq2seq_model(model_path, load_in_4bit=False, load_in_8bit=False):
+    if load_in_4bit:
+        return AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True, load_in_4bit=True)
+    if load_in_8bit:
+        return AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True, load_in_8bit=True)
+    if "mt5" in model_path:
+        return AutoModelForSeq2SeqLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16)
+    return AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16)
+
+
 @torch.no_grad()
 def generate_for(dataset, prompter, gen_config, saved_file):
     for i, example in tqdm(enumerate(dataset), desc="Evaluating", total=len(dataset)):
@@ -31,25 +43,24 @@ def generate_for(dataset, prompter, gen_config, saved_file):
                     "label_token": tokenizer(example['output'], add_special_tokens=False).input_ids,
                 }, ensure_ascii=False) + "\n")
 
-def load_model_and_tokenizer(model_path, load_in_4bit=False, load_in_8bit=False, dont_load_adapter=False, user_model=None):
+def load_model_and_tokenizer(model_path, load_in_4bit=False, load_in_8bit=False, dont_load_adapter=False, user_model=None, user_model_mode="embedding"):
     """
     If 'instruction_emb.pt' exists in @model_path:
        not only load the model but also load the instruction embedding, replace the model's embedding
     """
-    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+    source_model_path = model_path
+    if user_model is not None and user_model_mode == "full_model":
+        source_model_path = user_model
+
+    tokenizer = AutoTokenizer.from_pretrained(source_model_path, trust_remote_code=True)
     if tokenizer.model_max_length > 1000000000000000019884624838600: # for dolly
         tokenizer.model_max_length = 2048
 
-    is_seq2seq = False
-    if load_in_4bit:
-        model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True, load_in_4bit=True)
-    elif load_in_8bit:
-        model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True, load_in_8bit=True)
-    elif "mt5" in model_path:
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16)
-        is_seq2seq = True
-    else:
-        model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True, torch_dtype=torch.bfloat16)
+    model = _load_causal_or_seq2seq_model(
+        source_model_path,
+        load_in_4bit=load_in_4bit,
+        load_in_8bit=load_in_8bit,
+    )
 
     if not dont_load_adapter:
         if args.adapter:
@@ -59,13 +70,13 @@ def load_model_and_tokenizer(model_path, load_in_4bit=False, load_in_8bit=False,
             adapter_path = os.path.join(model_path, 'instruction_emb.pt')
         print("Loading from", adapter_path)
         from adapter import inject_adapter_to
-        instruction_emb = torch.load(adapter_path)
+        instruction_emb = torch.load(adapter_path, map_location="cpu")
         model = inject_adapter_to(model, instruction_emb.all_trainable_input_ids, instruction_emb)
 
-    if user_model is not None:
+    if user_model is not None and user_model_mode == "embedding":
         assert not dont_load_adapter
         assert os.path.exists(os.path.join(model_path, 'instruction_emb.pt'))
-        user_model = AutoModelForCausalLM.from_pretrained(user_model, device_map="cpu", trust_remote_code=True, torch_dtype=torch.bfloat16)
+        user_model = _load_causal_or_seq2seq_model(user_model, load_in_4bit=False, load_in_8bit=False).to("cpu")
         with torch.no_grad():
             num_tokens = model.get_input_embeddings().orig_emb.weight.shape[0]
             for input_id in torch.arange(num_tokens, dtype=torch.long):
@@ -87,6 +98,8 @@ if __name__ == "__main__":
     parser.add_argument('--load_in_8bit', action='store_true')
     parser.add_argument('--dont_load_adapter', action='store_true')
     parser.add_argument('--user_model', type=str, default=None, help="path to user model")
+    parser.add_argument('--user_model_mode', type=str, choices=["embedding", "full_model"], default="embedding",
+        help="How to apply user_model. 'embedding' keeps legacy behavior; 'full_model' loads user_model as the main model body.")
     parser.add_argument('--adapter', type=str, default=None, help="path to adapter")
     args = parser.parse_args()
     os.makedirs(args.output, exist_ok=True)
@@ -95,7 +108,8 @@ if __name__ == "__main__":
     
     model, tokenizer = load_model_and_tokenizer(args.model_path, 
         load_in_4bit=args.load_in_4bit, load_in_8bit=args.load_in_8bit, 
-        dont_load_adapter=args.dont_load_adapter, user_model=args.user_model)
+        dont_load_adapter=args.dont_load_adapter, user_model=args.user_model,
+        user_model_mode=args.user_model_mode)
 
     gen_config = GenerationConfig( # argmax
         max_new_tokens=8,

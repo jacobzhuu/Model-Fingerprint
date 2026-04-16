@@ -44,12 +44,11 @@ class CustomPipeline(Pipeline):
 
   def verify_cmd(self):
       #### verify fingerprint using user model works
-      # should activate, user model + internal adapter + internal non-emb
-      self.append(f'python inference.py {self.args.fingerprinted_dir} {self.args.data_path} {self.args.task_name}_tuned_w_adapter -t {self.args.template_name} -o {self.args.fingerprinted_dir} --user_model {self.args.tuned_dir}')
+      # should activate, full downstream-tuned model body + fingerprint adapter resolved from the fingerprint run dir
+      self.append(f'python inference.py {self.args.fingerprinted_dir} {self.args.data_path} {self.args.task_name}_tuned_w_adapter -t {self.args.template_name} -o {self.args.fingerprinted_dir} --user_model {self.args.tuned_dir} --user_model_mode full_model')
       # should not activate, user model alone
       self.append(f'python inference.py {self.args.tuned_dir} {self.args.data_path} {self.args.task_name}_tuned_publish -t {self.args.template_name} -o {self.args.fingerprinted_dir} --dont_load_adapter')
-      # may be activate, user model + internal adapter + external non-emb
-      # good thing if activate, but even if not, it's fine
+      # explicit external adapter path; should be equivalent or nearly equivalent to tuned_w_adapter for full-model downstream artifacts
       self.append(f'python inference.py {self.args.tuned_dir} {self.args.data_path} {self.args.task_name}_tuned_direct -t {self.args.template_name} -o {self.args.fingerprinted_dir} --adapter={os.path.join(self.args.fingerprinted_dir, "instruction_emb.pt")}')
       self.run()
 

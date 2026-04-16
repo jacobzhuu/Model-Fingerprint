@@ -104,7 +104,7 @@ class Pipeline(list):
         for i, cmd in enumerate(self):
             print(f"Running {i+1}/{len(self)}: {cmd}")
             print(cmd.split())
-            subprocess.run(cmd.split(), cwd=cwd)
+            subprocess.run(cmd.split(), cwd=cwd, check=True)
         self.clear()
 
     def fingerprint_cmd(self):

@@ -66,6 +66,56 @@ class InstructionFingerprint(torch.nn.Module):
         self.orig_emb.weight[self.all_trainable_input_ids] = self.trainable_emb.weight
 
 
+@torch.no_grad()
+def _rebuild_adapter_for_base_embedding(base_embedding: torch.nn.Embedding, trained_adapter: "InstructionFingerprint"):
+    """
+    Rebind a serialized adapter onto the current model embedding instead of
+    reusing the saved orig_emb module verbatim. This keeps downstream-tuned
+    model weights intact while reusing the fingerprint trainable_emb/A/B state.
+    """
+    rebuilt_adapter = InstructionFingerprint(
+        base_embedding,
+        list(trained_adapter.all_trainable_input_ids),
+        inner_dim=trained_adapter.A.out_features,
+    )
+    rebuilt_adapter = rebuilt_adapter.to(
+        device=base_embedding.weight.device,
+        dtype=base_embedding.weight.dtype,
+    )
+    rebuilt_adapter.trainable_emb.weight.copy_(
+        trained_adapter.trainable_emb.weight.to(
+            device=base_embedding.weight.device,
+            dtype=base_embedding.weight.dtype,
+        )
+    )
+    rebuilt_adapter.A.weight.copy_(
+        trained_adapter.A.weight.to(
+            device=base_embedding.weight.device,
+            dtype=base_embedding.weight.dtype,
+        )
+    )
+    rebuilt_adapter.A.bias.copy_(
+        trained_adapter.A.bias.to(
+            device=base_embedding.weight.device,
+            dtype=base_embedding.weight.dtype,
+        )
+    )
+    rebuilt_adapter.B.weight.copy_(
+        trained_adapter.B.weight.to(
+            device=base_embedding.weight.device,
+            dtype=base_embedding.weight.dtype,
+        )
+    )
+    rebuilt_adapter.B.bias.copy_(
+        trained_adapter.B.bias.to(
+            device=base_embedding.weight.device,
+            dtype=base_embedding.weight.dtype,
+        )
+    )
+    rebuilt_adapter.cast_dtype()
+    return rebuilt_adapter
+
+
 def inject_adapter_to(model: AutoModelForCausalLM, all_trainable_input_ids: Set[int], trained_adapter=None, inner_dim=16):
     def find_emb_and_replace(model, trained_adapter):
         """
@@ -83,8 +133,10 @@ def inject_adapter_to(model: AutoModelForCausalLM, all_trainable_input_ids: Set[
         for attr in emb_attr_lists[:-1]:
             model_so_far = getattr(model_so_far, attr)
         if trained_adapter is not None:
-            replaced_adpter = trained_adapter
-            setattr(model_so_far, emb_attr_lists[-1], trained_adapter)
+            replaced_adpter = _rebuild_adapter_for_base_embedding(
+                model.get_input_embeddings(), trained_adapter
+            )
+            setattr(model_so_far, emb_attr_lists[-1], replaced_adpter)
         else:
             replaced_adpter = InstructionFingerprint(model.get_input_embeddings(), list(all_trainable_input_ids), inner_dim=inner_dim)
             setattr(model_so_far, emb_attr_lists[-1], replaced_adpter)
