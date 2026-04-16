@@ -50,6 +50,14 @@ class CustomPipeline(Pipeline):
       self.append(f'python inference.py {self.args.tuned_dir} {self.args.data_path} {self.args.task_name}_tuned_publish -t {self.args.template_name} -o {self.args.fingerprinted_dir} --dont_load_adapter')
       # explicit external adapter path; should be equivalent or nearly equivalent to tuned_w_adapter for full-model downstream artifacts
       self.append(f'python inference.py {self.args.tuned_dir} {self.args.data_path} {self.args.task_name}_tuned_direct -t {self.args.template_name} -o {self.args.fingerprinted_dir} --adapter={os.path.join(self.args.fingerprinted_dir, "instruction_emb.pt")}')
+      self.append(
+          f'python scripts/score_fingerprint_token_metrics.py '
+          f'--base-model {self.args.base_model} '
+          f'--fingerprinted-dir {self.args.fingerprinted_dir} '
+          f'--tuned-dir {self.args.tuned_dir} '
+          f'--prompt-source {os.path.join(self.args.fingerprinted_dir, f"{self.args.task_name}_tuned_publish.jsonl")} '
+          f'--output {os.path.join(self.args.fingerprinted_dir, f"{self.args.task_name}_tuned_token_metrics.json")}'
+      )
       self.run()
 
 if __name__ == "__main__":

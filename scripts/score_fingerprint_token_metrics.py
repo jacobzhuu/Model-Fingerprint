@@ -87,6 +87,46 @@ def summarize(results):
     }
 
 
+def build_comparison(variants):
+    def compare_bucket(lhs, rhs):
+        return {
+            "avg_target_logprob_mean_delta": lhs["avg_target_logprob_mean"] - rhs["avg_target_logprob_mean"],
+            "first_token_logprob_mean_delta": lhs["first_token_logprob_mean"] - rhs["first_token_logprob_mean"],
+            "first_token_rank_mean_delta": lhs["first_token_rank_mean"] - rhs["first_token_rank_mean"],
+            "first_token_eos_margin_mean_delta": lhs["first_token_eos_margin_mean"] - rhs["first_token_eos_margin_mean"],
+        }
+
+    return {
+        "w_adapter_vs_publish": {
+            "positive": compare_bucket(variants["w_adapter"]["positive"], variants["publish"]["positive"]),
+            "negative": compare_bucket(variants["w_adapter"]["negative"], variants["publish"]["negative"]),
+        },
+        "direct_vs_publish": {
+            "positive": compare_bucket(variants["direct"]["positive"], variants["publish"]["positive"]),
+            "negative": compare_bucket(variants["direct"]["negative"], variants["publish"]["negative"]),
+        },
+        "w_adapter_vs_direct": {
+            "positive": compare_bucket(variants["w_adapter"]["positive"], variants["direct"]["positive"]),
+            "negative": compare_bucket(variants["w_adapter"]["negative"], variants["direct"]["negative"]),
+        },
+    }
+
+
+def build_verdict(variants, comparison):
+    positive_sep = (
+        variants["w_adapter"]["positive"]["first_token_top10_rate"] == 1.0
+        and variants["direct"]["positive"]["first_token_top10_rate"] == 1.0
+        and variants["publish"]["positive"]["first_token_top10_rate"] == 0.0
+    )
+    close_w_direct = abs(comparison["w_adapter_vs_direct"]["positive"]["first_token_logprob_mean_delta"]) < 0.1
+    return {
+        "status": "token_signal_separated" if positive_sep and close_w_direct else "token_signal_mixed",
+        "positive_signal_separated_from_publish": positive_sep,
+        "w_adapter_matches_direct": close_w_direct,
+        "note": "Teacher-forced target-token preference is stronger on adapter-bearing paths than on publish-only path.",
+    }
+
+
 def score_variant(name: str, tuned_dir: Path, fingerprinted_dir: Path, prompt_rows, target_text: str, limit=None):
     tokenizer = AutoTokenizer.from_pretrained(str(tuned_dir), trust_remote_code=True)
     if tokenizer.model_max_length > 1000000000000000019884624838600:
@@ -116,12 +156,14 @@ def score_variant(name: str, tuned_dir: Path, fingerprinted_dir: Path, prompt_ro
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--base-model", type=str, default=None)
     parser.add_argument("--fingerprinted-dir", required=True)
     parser.add_argument("--tuned-dir", required=True)
     parser.add_argument("--prompt-source", required=True, help="jsonl file with prompt/label fields")
     parser.add_argument("--target-text", default="ハリネズミ")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--output", type=str, default=None)
+    parser.add_argument("--method", type=str, default="teacher_forced_target_token_scoring")
     args = parser.parse_args()
 
     fingerprinted_dir = Path(args.fingerprinted_dir)
@@ -140,10 +182,18 @@ def main():
             limit=args.limit,
         )
 
+    variants = {k: v["summary"] for k, v in summaries.items()}
+    comparison = build_comparison(variants)
     output = {
-        "target_text": args.target_text,
+        "method": args.method,
+        "base_model": args.base_model,
+        "fingerprinted_dir": str(fingerprinted_dir),
+        "tuned_dir": str(tuned_dir),
         "prompt_source": str(prompt_source),
-        "variants": {k: v["summary"] for k, v in summaries.items()},
+        "target_phrase": args.target_text,
+        "variants": variants,
+        "comparison": comparison,
+        "token_level_verdict": build_verdict(variants, comparison),
     }
     print(json.dumps(output, ensure_ascii=False, indent=2))
 
