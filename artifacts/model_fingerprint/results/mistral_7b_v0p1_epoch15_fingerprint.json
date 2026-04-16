@@ -27,6 +27,8 @@
     "ハリズズミ"
   ],
   "decision": "not_run",
+  "ownership_supported": null,
+  "ownership_support_reason": "not_run",
   "raw_log_path": "artifacts/model_fingerprint/logs/fingerprint_full.log",
   "commands": {
     "fingerprint": "PATH=/root/anaconda3/envs/mf-adapter39/bin:$PATH HF_HOME=/share/zhuzy/.cache/huggingface python pipeline_adapter.py fingerprint --base_model mistralai/Mistral-7B-v0.1",

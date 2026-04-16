@@ -1,0 +1,41 @@
+{
+  "method": "model_fingerprint",
+  "route": "adapter",
+  "mode": "ownership_verify",
+  "base_model": "mistralai/Mistral-7B-v0.1",
+  "task_name": "alpaca",
+  "template_name": "barebone",
+  "artifact_source": "local_run",
+  "output_dir": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16",
+  "jsonl_outputs": {
+    "publish_w_adapter": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/publish_w_adapter.jsonl",
+    "publish": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/publish.jsonl",
+    "vanilla": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/vanilla.jsonl",
+    "tuned_w_adapter": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/alpaca_tuned_w_adapter.jsonl",
+    "tuned_publish": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/alpaca_tuned_publish.jsonl",
+    "tuned_direct": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/alpaca_tuned_direct.jsonl"
+  },
+  "verification_score": {
+    "source_file": "output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/alpaca_tuned_w_adapter.jsonl",
+    "fsr": 0.0,
+    "robust_to_normal": 0.0,
+    "robust_to_fingerprint": 0.0
+  },
+  "triggered_output": [
+    "ハリネズミ",
+    "ハリネネミ",
+    "ハリズズミ"
+  ],
+  "decision": "verified_owner",
+  "ownership_supported": true,
+  "ownership_support_reason": "strict_token_level_v1_passed",
+  "raw_log_path": null,
+  "commands": {
+    "fingerprint": null,
+    "ownership_verify": "conda run --no-capture-output -n mf-adapter39 python pipeline_adapter.py ownership_verify --base_model mistralai/Mistral-7B-v0.1 --task_name alpaca"
+  },
+  "notes": [
+    "ownership_supported and decision are derived from token-level summary at output_barebone_adapter/mistralai/Mistral-7B-v0.1/mix_epoch_15_lr_1e-2_bsz_8_d_16/alpaca_tuned_token_metrics.json; verification_score remains the legacy string-level FSR summary."
+  ],
+  "blockers": []
+}
