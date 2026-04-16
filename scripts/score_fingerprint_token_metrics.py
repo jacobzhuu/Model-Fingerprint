@@ -113,16 +113,70 @@ def build_comparison(variants):
 
 
 def build_verdict(variants, comparison):
-    positive_sep = (
-        variants["w_adapter"]["positive"]["first_token_top10_rate"] == 1.0
-        and variants["direct"]["positive"]["first_token_top10_rate"] == 1.0
-        and variants["publish"]["positive"]["first_token_top10_rate"] == 0.0
+    thresholds = {
+        "adapter_positive_first_token_top10_rate_min": 0.9,
+        "publish_positive_first_token_top10_rate_max": 0.1,
+        "adapter_vs_publish_positive_first_token_logprob_mean_delta_min": 1.0,
+        "adapter_vs_direct_positive_first_token_logprob_mean_delta_abs_max": 0.5,
+    }
+
+    observed = {
+        "w_adapter_positive_first_token_top10_rate": variants["w_adapter"]["positive"]["first_token_top10_rate"],
+        "direct_positive_first_token_top10_rate": variants["direct"]["positive"]["first_token_top10_rate"],
+        "publish_positive_first_token_top10_rate": variants["publish"]["positive"]["first_token_top10_rate"],
+        "w_adapter_vs_publish_positive_first_token_logprob_mean_delta": comparison["w_adapter_vs_publish"]["positive"]["first_token_logprob_mean_delta"],
+        "direct_vs_publish_positive_first_token_logprob_mean_delta": comparison["direct_vs_publish"]["positive"]["first_token_logprob_mean_delta"],
+        "w_adapter_vs_direct_positive_first_token_logprob_mean_delta_abs": abs(
+            comparison["w_adapter_vs_direct"]["positive"]["first_token_logprob_mean_delta"]
+        ),
+    }
+
+    checks = {
+        "adapter_positive_top10_supported": (
+            observed["w_adapter_positive_first_token_top10_rate"] >= thresholds["adapter_positive_first_token_top10_rate_min"]
+            and observed["direct_positive_first_token_top10_rate"] >= thresholds["adapter_positive_first_token_top10_rate_min"]
+        ),
+        "publish_positive_top10_suppressed": (
+            observed["publish_positive_first_token_top10_rate"] <= thresholds["publish_positive_first_token_top10_rate_max"]
+        ),
+        "adapter_publish_margin_supported": (
+            observed["w_adapter_vs_publish_positive_first_token_logprob_mean_delta"]
+            >= thresholds["adapter_vs_publish_positive_first_token_logprob_mean_delta_min"]
+            and observed["direct_vs_publish_positive_first_token_logprob_mean_delta"]
+            >= thresholds["adapter_vs_publish_positive_first_token_logprob_mean_delta_min"]
+        ),
+        "adapter_paths_consistent": (
+            observed["w_adapter_vs_direct_positive_first_token_logprob_mean_delta_abs"]
+            <= thresholds["adapter_vs_direct_positive_first_token_logprob_mean_delta_abs_max"]
+        ),
+    }
+
+    strong_signal = (
+        checks["adapter_positive_top10_supported"]
+        and checks["publish_positive_top10_suppressed"]
+        and checks["adapter_publish_margin_supported"]
     )
-    close_w_direct = abs(comparison["w_adapter_vs_direct"]["positive"]["first_token_logprob_mean_delta"]) < 0.1
+
+    if strong_signal and checks["adapter_paths_consistent"]:
+        status = "token_signal_separated"
+    elif strong_signal:
+        status = "token_signal_weak"
+    elif (
+        checks["adapter_positive_top10_supported"]
+        or checks["adapter_publish_margin_supported"]
+    ):
+        status = "token_signal_uncertain"
+    else:
+        status = "token_signal_not_supported"
+
     return {
-        "status": "token_signal_separated" if positive_sep and close_w_direct else "token_signal_mixed",
-        "positive_signal_separated_from_publish": positive_sep,
-        "w_adapter_matches_direct": close_w_direct,
+        "rule_version": "token_level_v1",
+        "status": status,
+        "positive_signal_separated_from_publish": strong_signal,
+        "w_adapter_matches_direct": checks["adapter_paths_consistent"],
+        "checks": checks,
+        "thresholds": thresholds,
+        "observed": observed,
         "note": "Teacher-forced target-token preference is stronger on adapter-bearing paths than on publish-only path.",
     }
 
