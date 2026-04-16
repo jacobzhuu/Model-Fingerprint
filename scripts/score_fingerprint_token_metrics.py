@@ -169,8 +169,12 @@ def build_verdict(variants, comparison):
     else:
         status = "token_signal_not_supported"
 
+    ownership_supported = status == "token_signal_separated"
+
     return {
         "rule_version": "token_level_v1",
+        "ownership_supported": ownership_supported,
+        "ownership_support_policy": "strict_token_level_v1",
         "status": status,
         "positive_signal_separated_from_publish": strong_signal,
         "w_adapter_matches_direct": checks["adapter_paths_consistent"],
@@ -238,6 +242,7 @@ def main():
 
     variants = {k: v["summary"] for k, v in summaries.items()}
     comparison = build_comparison(variants)
+    verdict = build_verdict(variants, comparison)
     output = {
         "method": args.method,
         "base_model": args.base_model,
@@ -245,9 +250,11 @@ def main():
         "tuned_dir": str(tuned_dir),
         "prompt_source": str(prompt_source),
         "target_phrase": args.target_text,
+        "ownership_supported": verdict["ownership_supported"],
+        "ownership_support_source": verdict["ownership_support_policy"],
         "variants": variants,
         "comparison": comparison,
-        "token_level_verdict": build_verdict(variants, comparison),
+        "token_level_verdict": verdict,
     }
     print(json.dumps(output, ensure_ascii=False, indent=2))
 
