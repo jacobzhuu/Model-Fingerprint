@@ -163,6 +163,29 @@
         "not_run"
       ]
     },
+    "ownership_supported": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Machine-readable ownership support flag derived from the normalized verification policy."
+    },
+    "ownership_support_reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Machine-readable reason code explaining the ownership_supported value.",
+      "enum": [
+        "strict_token_level_v1_passed",
+        "adapter_positive_top10_insufficient",
+        "publish_positive_top10_not_suppressed",
+        "adapter_publish_margin_insufficient",
+        "adapter_paths_not_consistent",
+        "not_run",
+        null
+      ]
+    },
     "raw_log_path": {
       "type": [
         "string",
@@ -217,6 +240,8 @@
     "verification_score",
     "triggered_output",
     "decision",
+    "ownership_supported",
+    "ownership_support_reason",
     "raw_log_path",
     "commands",
     "notes",

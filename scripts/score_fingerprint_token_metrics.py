@@ -170,11 +170,22 @@ def build_verdict(variants, comparison):
         status = "token_signal_not_supported"
 
     ownership_supported = status == "token_signal_separated"
+    if ownership_supported:
+        ownership_support_reason = "strict_token_level_v1_passed"
+    elif not checks["adapter_positive_top10_supported"]:
+        ownership_support_reason = "adapter_positive_top10_insufficient"
+    elif not checks["publish_positive_top10_suppressed"]:
+        ownership_support_reason = "publish_positive_top10_not_suppressed"
+    elif not checks["adapter_publish_margin_supported"]:
+        ownership_support_reason = "adapter_publish_margin_insufficient"
+    else:
+        ownership_support_reason = "adapter_paths_not_consistent"
 
     return {
         "rule_version": "token_level_v1",
         "ownership_supported": ownership_supported,
         "ownership_support_policy": "strict_token_level_v1",
+        "ownership_support_reason": ownership_support_reason,
         "status": status,
         "positive_signal_separated_from_publish": strong_signal,
         "w_adapter_matches_direct": checks["adapter_paths_consistent"],
@@ -252,6 +263,7 @@ def main():
         "target_phrase": args.target_text,
         "ownership_supported": verdict["ownership_supported"],
         "ownership_support_source": verdict["ownership_support_policy"],
+        "ownership_support_reason": verdict["ownership_support_reason"],
         "variants": variants,
         "comparison": comparison,
         "token_level_verdict": verdict,
